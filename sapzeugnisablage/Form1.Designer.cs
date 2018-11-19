@@ -42,6 +42,7 @@
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.tabPage2 = new System.Windows.Forms.TabPage();
             this.tabPage3 = new System.Windows.Forms.TabPage();
+            this.backgroundWorkerCertificateProcessing = new System.ComponentModel.BackgroundWorker();
             this.tableLayoutPanel1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.tabControl1.SuspendLayout();
@@ -191,6 +192,11 @@
             this.tabPage3.Text = "Logbuch";
             this.tabPage3.UseVisualStyleBackColor = true;
             // 
+            // backgroundWorkerCertificateProcessing
+            // 
+            this.backgroundWorkerCertificateProcessing.DoWork += new System.ComponentModel.DoWorkEventHandler(this.backgroundWorkerCertificateProcessing_DoWork);
+            this.backgroundWorkerCertificateProcessing.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.backgroundWorkerCertificateProcessing_RunWorkerCompleted);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -230,6 +236,7 @@
         private System.Windows.Forms.TabPage tabPage2;
         private System.Windows.Forms.Button button3;
         private System.Windows.Forms.TabPage tabPage3;
+        private System.ComponentModel.BackgroundWorker backgroundWorkerCertificateProcessing;
     }
 }
 

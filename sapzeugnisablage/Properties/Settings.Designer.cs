@@ -37,7 +37,7 @@ namespace sapzeugnisablage.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("9")]
+        [global::System.Configuration.DefaultSettingValueAttribute("99")]
         public ushort certificateCreateCycleEndingDigits {
             get {
                 return ((ushort)(this["certificateCreateCycleEndingDigits"]));
@@ -92,6 +92,18 @@ namespace sapzeugnisablage.Properties {
             }
             set {
                 this["certificateNumberFileNameRegExp"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("ACME")]
+        public string certificateDomain {
+            get {
+                return ((string)(this["certificateDomain"]));
+            }
+            set {
+                this["certificateDomain"] = value;
             }
         }
     }

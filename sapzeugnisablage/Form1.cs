@@ -66,7 +66,13 @@ namespace sapzeugnisablage
                     return false;
                 });
             };
-            this.button3.Click += (o, data) => CertDirectory.ProcessCertificateFile(CertDirectory.CertFilesUnprocessed);
+            this.button3.Click += (o, data) =>
+            {
+                if (!backgroundWorkerCertificateProcessing.IsBusy)
+                {
+                    backgroundWorkerCertificateProcessing.RunWorkerAsync();
+                }
+            };
 
         }
 
@@ -99,7 +105,15 @@ namespace sapzeugnisablage
             this.toolStripStatusLabel1.Text = CertFolderStatusStrip;
         }
 
-        BindingList<LogEntry> LogBook;
+        private void backgroundWorkerCertificateProcessing_DoWork(object sender, DoWorkEventArgs e)
+        {
+            CertDirectory.ProcessCertificateFiles(CertDirectory.CertFilesUnprocessed, CertDirectory.CertFilesPDFunprocessed);
+            
+        }
 
+        private void backgroundWorkerCertificateProcessing_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            MessageBox.Show("Zertifikate wurden verarbeitet");
+        }
     }
 }

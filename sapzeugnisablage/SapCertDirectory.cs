@@ -104,9 +104,15 @@ namespace sapzeugnisablage
         }
 
         // process certificate files -> rename + processing PDFs
-        public void ProcessCertificateFile(List<FileInfo> files2process)
+        public void ProcessCertificateFiles(List<FileInfo> files2process, List<FileInfo> pdf2process)
         {
             // first processing pdf files
+            pdf2process.ForEach(pdf =>
+            {
+                PDFMetaData pdfProperties = new PDFMetaData(Properties.Settings.Default.certificateDomain , pdf.Directory.Name);
+
+                PDFactory.LabelonAllPages(pdf, pdfProperties);
+            });
 
             // second rename file
             string delimiterSign = Properties.Settings.Default.certificateFileNameSeparator;
@@ -222,6 +228,28 @@ namespace sapzeugnisablage
             if (Object.ReferenceEquals(f, null)) return 0;
 
             return f.FullName.GetHashCode();
+        }
+    }
+
+
+    // structur for properties that are inserted into PDF files while processing certificates
+    struct PDFMetaData
+    {
+        public string Domain; // company code
+        public string CertNum; //certificate number
+        //public DateTime certificateReceivedat;
+        public DateTime PDFmodified;
+        public SortedList<string,string> CustomProperties;
+
+        public PDFMetaData(string domain,string certificateNumber)
+        {
+            this.Domain= domain;
+            this.CertNum = certificateNumber;
+            this.PDFmodified = DateTime.Now;
+            this.CustomProperties = new SortedList<string, string>();
+            CustomProperties.Add("Domain", this.Domain);
+            CustomProperties.Add(this.Domain + @" Certificate Number", this.CertNum.ToString());
+            CustomProperties.Add(this.Domain + @" PDF modified", this.PDFmodified.ToString());
         }
     }
 }

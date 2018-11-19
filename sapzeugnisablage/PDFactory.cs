@@ -13,26 +13,29 @@ namespace sapzeugnisablage
 {
     static class PDFactory
     {
-        public static void LabelonAllPages(FileInfo file)
+        public static void LabelonAllPages(FileInfo file, PDFMetaData prop)
         {
-            Console.WriteLine("processing {0}", file.FullName);
-            const string LABELCERTFOLDER = "certificate-folder";
+            Console.WriteLine("PDF processing {0}", file.FullName);
+            //const string LABELCERTFOLDER = "certificate-folder";
 
             try
             {
                 PdfDocument document = PdfReader.Open(file.FullName);
 
-                document.Info.Subject = "certificate-folder:" + file.Directory.Name;
-                if (document.Info.Elements.ContainsKey("/" + LABELCERTFOLDER))
+                // write metadata
+                foreach(var customProp in prop.CustomProperties)
                 {
-                    document.Info.Elements.SetValue("/" + LABELCERTFOLDER, new PdfString(file.Directory.Name));
-                }
-                else
-                {
-                    document.Info.Elements.Add("/certificateFolder", new PdfString(file.Directory.Name));
+                    if (document.Info.Elements.ContainsKey(@"/" + customProp.Key))
+                    {
+                        document.Info.Elements.SetValue(@"/" + customProp.Key, new PdfString(customProp.Value));
+                    }
+                    else
+                    {
+                        document.Info.Elements.Add(@"/" + customProp.Key, new PdfString(customProp.Value));
+                    }
                 }
 
-                string inPrint = "Pharmatec Certificate Number: " + file.Directory.Name;
+                string inPrint = prop.Domain + @" Certificate Number: " + prop.CertNum;
                 foreach (PdfPage p in document.Pages)
                 {
 
