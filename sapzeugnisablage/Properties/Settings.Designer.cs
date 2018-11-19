@@ -25,7 +25,7 @@ namespace sapzeugnisablage.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("\\\\nas03\\peter\\Downloads\\SAP-Zeugnisse")]
+        [global::System.Configuration.DefaultSettingValueAttribute("\\\\nas03\\backup\\sap zeugnisse")]
         public string certificateRootFolder {
             get {
                 return ((string)(this["certificateRootFolder"]));
@@ -37,13 +37,13 @@ namespace sapzeugnisablage.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("533")]
-        public ushort certificateCreateCycle {
+        [global::System.Configuration.DefaultSettingValueAttribute("9")]
+        public ushort certificateCreateCycleEndingDigits {
             get {
-                return ((ushort)(this["certificateCreateCycle"]));
+                return ((ushort)(this["certificateCreateCycleEndingDigits"]));
             }
             set {
-                this["certificateCreateCycle"] = value;
+                this["certificateCreateCycleEndingDigits"] = value;
             }
         }
         
@@ -80,6 +80,18 @@ namespace sapzeugnisablage.Properties {
             }
             set {
                 this["certificateFileNameSeparator"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("^1\\d{6}\\..*\\..*$")]
+        public string certificateNumberFileNameRegExp {
+            get {
+                return ((string)(this["certificateNumberFileNameRegExp"]));
+            }
+            set {
+                this["certificateNumberFileNameRegExp"] = value;
             }
         }
     }

@@ -3,10 +3,10 @@
   <Profiles />
   <Settings>
     <Setting Name="certificateRootFolder" Type="System.String" Scope="User">
-      <Value Profile="(Default)">\\nas03\peter\Downloads\SAP-Zeugnisse</Value>
+      <Value Profile="(Default)">\\nas03\backup\sap zeugnisse</Value>
     </Setting>
-    <Setting Name="certificateCreateCycle" Type="System.UInt16" Scope="User">
-      <Value Profile="(Default)">533</Value>
+    <Setting Name="certificateCreateCycleEndingDigits" Type="System.UInt16" Scope="User">
+      <Value Profile="(Default)">9</Value>
     </Setting>
     <Setting Name="certificateNumberRangeStart" Type="System.UInt32" Scope="User">
       <Value Profile="(Default)">1000000</Value>
@@ -16,6 +16,9 @@
     </Setting>
     <Setting Name="certificateFileNameSeparator" Type="System.String" Scope="User">
       <Value Profile="(Default)">.</Value>
+    </Setting>
+    <Setting Name="certificateNumberFileNameRegExp" Type="System.String" Scope="User">
+      <Value Profile="(Default)">^1\d{6}\..*\..*$</Value>
     </Setting>
   </Settings>
 </SettingsFile>
