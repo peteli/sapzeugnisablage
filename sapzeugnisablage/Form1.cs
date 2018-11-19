@@ -136,7 +136,7 @@ namespace sapzeugnisablage
         public string CertRootFolderString { get; set; } //root directory of sap certificates folders
         public DirectoryInfo CertRootFolder { get { return new DirectoryInfo(CertRootFolderString); } }
         public List<DirectoryInfo> SubDirFolders { get { return new List<DirectoryInfo>(CertRootFolder.EnumerateDirectories()); } }
-        public List<DirectoryInfo> SubDirCertFolders { get { return SubDirFolders.FindAll(obj => Regex.IsMatch(obj.Name, Properties.Settings.Default.certificateNumberRegExp)); } }
+        public List<DirectoryInfo> SubDirCertFolders { get { return SubDirFolders.FindAll(obj => IsCertificateFolder(obj)); } }
         public List<FileInfo> CertFiles { get
             {
                 List<FileInfo> certfiles = new List<FileInfo>();
@@ -147,6 +147,7 @@ namespace sapzeugnisablage
                 Console.WriteLine("Es gibt {0} Zertifikate", certfiles.Count);
                 return certfiles;
             } }
+        public List<FileInfo> CertFilesProcessed { get { return CertFiles.FindAll(obj => IsProcessedCertificateFile(obj)); } }
         public List<FileInfo> CertFilesPDF { get { return CertFiles.FindAll(obj => (obj.Extension.ToLower() == ".pdf")); } }
         public List<string> SubDirCertFolderNames { get { return SubDirCertFolders.ConvertAll(obj => obj.Name); } }
         public List<uint> SubDirCertFolderNumbers { get { return SubDirCertFolders.ConvertAll(obj => Convert.ToUInt32(obj.Name)); } }
@@ -159,6 +160,8 @@ namespace sapzeugnisablage
         public uint MinCertNumber { get { return (SubDirCertFolderNumbers.Count > 1) ? SubDirCertFolderNumbers.Min() : this.CertNumberRangeStart - 1; } }
 
         // function/methods
+
+        // create subdirectories thus user can put certificates into them
         public List<DirectoryInfo> CreateSubDirectories(uint startnumber, uint endnumber)
         {
             List<DirectoryInfo> NewSubCertFolders = new List<DirectoryInfo>();
@@ -182,6 +185,12 @@ namespace sapzeugnisablage
             //end of little insert - delete later
 
             return NewSubCertFolders;
+        }
+
+        public bool ProcessCertificateFile(List<FileInfo> certfiles)
+        {
+            // filter if file is renamed
+            return true;
         }
 
         private void PutFilesPDFintoFolder(List<DirectoryInfo> myFolders)
@@ -227,8 +236,11 @@ namespace sapzeugnisablage
             return ((num % Math.Pow(10, certNumberDigits)) == 0);
         }
 
-
-        private bool FindCertificateFolder(DirectoryInfo obj)
+        private bool IsProcessedCertificateFile(FileInfo testFile)
+        {
+            if (Regex.IsMatch(testFile.Name, Properties.Settings.Default.certificateNumberFileNameRegExp)){ return true; } else { return false; }
+        }
+        private bool IsCertificateFolder(DirectoryInfo obj)
         {
             if (Regex.IsMatch(obj.Name, Properties.Settings.Default.certificateNumberRegExp)) { return true; } else { return false; }
         }
