@@ -18,7 +18,7 @@ namespace sapzeugnisablage
         {
             // make sure the path exists on this machine
             CertRootFolderString = Directory.Exists(fullPath) ? fullPath : Properties.Settings.Default.certificateRootFolder;
-            CertRootFolderString = Directory.Exists(CertRootFolderString) ? CertRootFolderString : Environment.SpecialFolder.Personal.ToString();
+            CertRootFolderString = Directory.Exists(CertRootFolderString) ? CertRootFolderString : Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
         }
 
         // event definitions
