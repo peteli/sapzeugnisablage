@@ -4,6 +4,7 @@ using System.Collections;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -38,19 +39,49 @@ namespace sapzeugnisablage
         {
             get
             {
-                List<FileInfo> certfilesInfo = new List<FileInfo>();
-                certfilesInfo.Capacity = 10000;
-                Console.WriteLine("certfiles.Capacity: {0}", certfilesInfo.Capacity);
-                Console.WriteLine("CertFile Property holt alle Dateien.");
+                // list of files in certfolders
+                var certfilesInfo = new List<FileInfo>();
+                // collection of async tasks
+                var tasks = new List<Task<FileInfo[]>>();
+                // eye candy
                 uint folderCount = (uint)SubDirCertFolders.Count;
+                // eye candy
                 uint counter = 0;
+                
+                // get directory async SPEED BABY
                 SubDirCertFolders.ForEach(certfolder =>
                 {
                     OnTaskProgressed(new TaskProgressedEventArgs(1, folderCount, ++counter, new StringBuilder("Sammle Zertifiate aus ").Append(certfolder.Name).ToString()));
-                    Console.WriteLine("certfiles.Capacity: {0} bei {1}", certfilesInfo.Capacity, certfilesInfo.Count);
-                    certfilesInfo.AddRange(certfolder.GetFiles());
+                    tasks.Add(Task.Run(()=> 
+                    {
+                        Console.WriteLine("started async Task={0}, Thread={1}",
+                                                     Task.CurrentId,
+                                                      Thread.CurrentThread.ManagedThreadId);
+                        return certfolder.GetFiles();
+
+                    }));
                 });
+                Console.WriteLine("Es gibt {0} tasks", tasks.Count);
+                // get task that finishes when
+                var resultCollector = Task.WhenAll(tasks);
+
+                resultCollector.Wait(); //stop thread until all task are completed
+                
+                if (resultCollector.Status == TaskStatus.RanToCompletion)
+                {
+                    foreach (var result in resultCollector.Result)
+                    {
+                        certfilesInfo.AddRange(result);
+                    }
+                }
+
+
+
+
+
+
                 Console.WriteLine("Es gibt {0} Zertifikate", certfilesInfo.Count);
+
                 return certfilesInfo;
             }
         }
