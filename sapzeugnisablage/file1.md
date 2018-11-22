@@ -8,3 +8,8 @@ Im ini file ist 999 hinterlegt, dass heißt, das jeder neue Zyklus neue Nummern 
 ```csharp
 uint = 1000000;
 string highestPower = uint
+```
+
+# How to: Make Thread-Safe Calls to Windows Forms Controls
+
+https://docs.microsoft.com/de-de/dotnet/framework/winforms/controls/how-to-make-thread-safe-calls-to-windows-forms-controls#making-thread-safe-calls-to-windows-forms-controls

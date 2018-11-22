@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
 using System.Text;
-
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -48,25 +44,28 @@ namespace sapzeugnisablage
         {
 
             CertDirectory = new SapCertDirectory(Properties.Settings.Default.certificateRootFolder);
-            this.propertyGrid1.SelectedObject = CertDirectory;
+            //this.propertyGrid1.SelectedObject = CertDirectory;
             this.textBox1.Text = CertDirectory.CertRootFolderString;
             this.folderBrowserDialog1.SelectedPath = CertDirectory.CertRootFolderString;
             this.toolStripStatusLabel1.Text = CertFolderStatusStrip;
 
+            //Console.SetOut(new ConsoleWriter(textBoxConsoleOutput));
+            //Console.SetOut(new StreamWriter(Console.OpenStandardOutput()));
+
             //handler for progress bar
-            CertDirectory.TaskProgressed += InvokeUpdateProgressBar;
+            CertDirectory.TaskProgressed += UpdateProgressBar;
 
             //handler for button create folders
-            this.button2.Click += async (o, data) =>
+            this.toolStripButtonCreateFolder.Click += async (o, data) =>
             {
-                var result = await Task.Run(() =>
+                await Task.Run(() =>
                 {
-                    CertDirectory.CreateSubDirectories(CertDirectory.MaxCertNumber + 1, CertDirectory.CertNumberCycleNext);
-                    InvokeUpdateProgressBar(null, new TaskProgressedEventArgs(0, 0, 0, ""));
-                    return false;
+                    CertDirectory.CreateSubDirectories();
                 });
             };
-            this.button3.Click += (o, data) =>
+            
+            // handler for button Process Certificate File (especially PDF)
+            this.toolStripButtonProcessCertificate.Click += (o, data) =>
             {
                 if (!backgroundWorkerCertificateProcessing.IsBusy)
                 {
@@ -74,24 +73,52 @@ namespace sapzeugnisablage
                 }
             };
 
+            //event handler for picking root directory of certificates
+            this.toolStripButtonPickDirectory.Click += (o, data) =>
+            {
+                if (folderBrowserDialog1.ShowDialog() == DialogResult.OK)
+                {
+                    SapCertFullPath = folderBrowserDialog1.SelectedPath;
+                }
+
+            };
+
+            //PopulateListView();
+
+            listBox1.DataSource = CertDirectory.SubDirCertFolder;
+            listBox1.DisplayMember = Name.ToString();
         }
 
-
-
-        //public delegate void UpdateProgressBar(TaskProgressedEventArgs e);
-
-        private void InvokeUpdateProgressBar(object sender, TaskProgressedEventArgs e)
+        private void PopulateListView()
         {
-            //progressBar1.Invoke(new UpdateProgressBar(UpdateProgressBarControl), new object[] { e }) ;
+            CertDirectory.SubDirCertFolder.ForEach(obj =>
+            {
+                ListViewItem newItem = new ListViewItem(obj);
+                //listView1.Items.Add(newItem);
+            });
+        }
 
-            toolStripProgressBar1.GetCurrentParent().Invoke(new MethodInvoker(delegate
+        // delegate for thread safe update of progress bar
+        private delegate void UpdateProgressBarDelegate(object o, TaskProgressedEventArgs e);
+        // update progress bar thread safe
+        private void UpdateProgressBar(object o, TaskProgressedEventArgs e)
+        {
+            // InvokeRequired required compares the thread ID of the
+            // calling thread to the thread ID of the creating thread.
+            // If these threads are different, it returns true.
+            if (statusStrip1.InvokeRequired)
+            {
+                //create new delegate
+                UpdateProgressBarDelegate d = new UpdateProgressBarDelegate(UpdateProgressBar);// use the very same function to call it again in correct and save thread
+                this.Invoke(d, new object[] {o,e});
+            }
+            else
             {
                 toolStripProgressBar1.Minimum = (int)e.Start;
                 toolStripProgressBar1.Maximum = (int)e.End;
                 toolStripProgressBar1.Value = (int)e.Val;
-                //toolStripProgressBar1.ToolTipText = e.Text;
-            }), new object[] { e });
-
+                toolStripStatusLabel1.Text = string.IsNullOrEmpty(e.Text) ? CertFolderStatusStrip: e.Text ;
+            }
         }
 
 
@@ -107,13 +134,27 @@ namespace sapzeugnisablage
 
         private void backgroundWorkerCertificateProcessing_DoWork(object sender, DoWorkEventArgs e)
         {
-            CertDirectory.ProcessCertificateFiles(CertDirectory.CertFilesUnprocessed, CertDirectory.CertFilesPDFunprocessed);
-            
+            CertDirectory.ProcessCertificateFiles();
         }
 
         private void backgroundWorkerCertificateProcessing_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            MessageBox.Show("Zertifikate wurden verarbeitet");
+            MessageBox.Show("Zertifikate wurden verarbeitet","Hinweis", MessageBoxButtons.OK,MessageBoxIcon.Information);
+        }
+
+        private void toolStripProgressBar1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void toolStripButton2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }

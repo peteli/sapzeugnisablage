@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,7 +19,7 @@ namespace sapzeugnisablage
         {
             // make sure the path exists on this machine
             CertRootFolderString = Directory.Exists(fullPath) ? fullPath : Properties.Settings.Default.certificateRootFolder;
-            CertRootFolderString = Directory.Exists(CertRootFolderString) ? CertRootFolderString : Environment.SpecialFolder.Personal.ToString();
+            CertRootFolderString = Directory.Exists(CertRootFolderString) ? CertRootFolderString : Environment.GetFolderPath(Environment.SpecialFolder.Recent);
         }
 
         // event definitions
@@ -37,20 +38,27 @@ namespace sapzeugnisablage
         {
             get
             {
-                List<FileInfo> certfiles = new List<FileInfo>();
+                List<FileInfo> certfilesInfo = new List<FileInfo>();
+                certfilesInfo.Capacity = 10000;
+                Console.WriteLine("certfiles.Capacity: {0}", certfilesInfo.Capacity);
+                Console.WriteLine("CertFile Property holt alle Dateien.");
+                uint folderCount = (uint)SubDirCertFolders.Count;
+                uint counter = 0;
                 SubDirCertFolders.ForEach(certfolder =>
                 {
-                    certfiles.AddRange(certfolder.EnumerateFiles());
+                    OnTaskProgressed(new TaskProgressedEventArgs(1, folderCount, ++counter, new StringBuilder("Sammle Zertifiate aus ").Append(certfolder.Name).ToString()));
+                    Console.WriteLine("certfiles.Capacity: {0} bei {1}", certfilesInfo.Capacity, certfilesInfo.Count);
+                    certfilesInfo.AddRange(certfolder.GetFiles());
                 });
-                //Console.WriteLine("Es gibt {0} Zertifikate", certfiles.Count);
-                return certfiles;
+                Console.WriteLine("Es gibt {0} Zertifikate", certfilesInfo.Count);
+                return certfilesInfo;
             }
         }
         public List<FileInfo> CertFilesProcessed { get { return CertFiles.FindAll(obj => IsProcessedCertificateFile(obj)); } }
         public List<FileInfo> CertFilesUnprocessed { get { return CertFiles.Except(CertFilesProcessed, new FileInfoComparer()).ToList(); } }
         public List<FileInfo> CertFilesPDF { get { return CertFiles.FindAll(obj => (obj.Extension.ToLower() == ".pdf")); } }
         public List<FileInfo> CertFilesPDFunprocessed { get { return CertFilesPDF.Except(CertFilesProcessed,new FileInfoComparer()).ToList(); } }
-        public List<string> SubDirCertFolderNames { get { return SubDirCertFolders.ConvertAll(obj => obj.Name); } }
+        public List<string> SubDirCertFolder { get { return SubDirCertFolders.ConvertAll(obj => obj.Name); } }
         public List<uint> SubDirCertFolderNumbers { get { return SubDirCertFolders.ConvertAll(obj => Convert.ToUInt32(obj.Name)); } }
         public uint CertNumberRangeStart { get { return Properties.Settings.Default.certificateNumberRangeStart; } }
         public uint CertNumberCycleEndingDigits { get { return Properties.Settings.Default.certificateCreateCycleEndingDigits; } }
@@ -63,17 +71,17 @@ namespace sapzeugnisablage
         // function/methods
 
         // create subdirectories thus user can put certificates into them
+        public List<DirectoryInfo> CreateSubDirectories(){return CreateSubDirectories(this.MaxCertNumber + 1, this.CertNumberCycleNext);}
         public List<DirectoryInfo> CreateSubDirectories(uint startnumber, uint endnumber)
         {
             List<DirectoryInfo> NewSubCertFolders = new List<DirectoryInfo>();
             for (uint certnum = startnumber; certnum <= endnumber; certnum++)
             {
-                OnTaskProgressed(new TaskProgressedEventArgs(startnumber, endnumber, certnum, "create folders"));
-
                 try
                 {
                     var newCertFolder = this.CertRootFolder.CreateSubdirectory(certnum.ToString());
                     NewSubCertFolders.Add(newCertFolder);
+                    OnTaskProgressed(new TaskProgressedEventArgs(startnumber, endnumber, certnum, new StringBuilder("Erstelle Ordner ").Append(certnum).ToString()));
                 }
                 catch (IOException e)
                 {
@@ -81,9 +89,10 @@ namespace sapzeugnisablage
                 }
             }
 
-            //little insert here to put some pdf into the new folders
+            //little insert here to put some pdf into the new folders for testing purpose
             PutFilesPDFintoFolder(NewSubCertFolders);
             //end of little insert - delete later
+            OnTaskProgressed(new TaskProgressedEventArgs(0, 0, 0, ""));
 
             return NewSubCertFolders;
         }
@@ -91,30 +100,41 @@ namespace sapzeugnisablage
         // for test with put same random files into each certificate folders
         private void PutFilesPDFintoFolder(List<DirectoryInfo> myFolders)
         {
+            int folderCount = myFolders.Count;
+            uint counter = 0;
             myFolders.ForEach(obj =>
             {
                 Console.WriteLine("bin gerade bei: {0}", obj.FullName);
+                OnTaskProgressed(new TaskProgressedEventArgs(0, (uint)folderCount, counter++, new StringBuilder("Erstelle Beispiel-PDF in Ordner ").Append(obj.FullName).ToString()));
                 //get fileinfos auf files in cert root directory
 
                 List<FileInfo> FileTemplates = new List<FileInfo>(CertRootFolder.EnumerateFiles());
 
                 FileTemplates.ForEach(f => f.CopyTo(obj.FullName + "\\" + f.Name));
-
+                
             });
+            OnTaskProgressed(new TaskProgressedEventArgs(0, 0, 0, ""));
         }
 
         // process certificate files -> rename + processing PDFs
+        public void ProcessCertificateFiles() { ProcessCertificateFiles(this.CertFilesUnprocessed, this.CertFilesPDFunprocessed); }
         public void ProcessCertificateFiles(List<FileInfo> files2process, List<FileInfo> pdf2process)
         {
+            
             // first processing pdf files
+            uint counter = 0;
             pdf2process.ForEach(pdf =>
             {
                 PDFMetaData pdfProperties = new PDFMetaData(Properties.Settings.Default.certificateDomain , pdf.Directory.Name);
 
                 PDFactory.LabelonAllPages(pdf, pdfProperties);
+                // trigger event
+                OnTaskProgressed(new TaskProgressedEventArgs(0, (uint)pdf2process.Count, counter++, 
+                    new StringBuilder("Verarbeite PDF ").Append(pdf.Name).ToString()));
             });
 
             // second rename file
+            counter = 0;
             string delimiterSign = Properties.Settings.Default.certificateFileNameSeparator;
             files2process.ForEach((f) =>
             {
@@ -126,7 +146,11 @@ namespace sapzeugnisablage
 
                 // rename file by moving is (like linux :-)
                 f.MoveTo(newFileName.ToString());
+                // trigger event
+                OnTaskProgressed(new TaskProgressedEventArgs(0, (uint)files2process.Count, counter++, 
+                    new StringBuilder("Umbenennen Datei ").Append(f.Name).ToString()));
             });
+            OnTaskProgressed(new TaskProgressedEventArgs(0, 0, 0, ""));
         }
 
 
@@ -138,9 +162,9 @@ namespace sapzeugnisablage
             {
                 nextCertNumber++;
                 // raise event
-                OnTaskProgressed(new TaskProgressedEventArgs(maxCertNumber, (maxCertNumber + certNumberCycleSafe + 1), nextCertNumber, "seeking next max cert"));
+                //OnTaskProgressed(new TaskProgressedEventArgs(maxCertNumber, (maxCertNumber + certNumberCycleSafe + 1), nextCertNumber, "seeking next max cert"));
             }
-            OnTaskProgressed(new TaskProgressedEventArgs(0, 0, 0, "ready"));
+            //OnTaskProgressed(new TaskProgressedEventArgs(0, 0, 0, "ready"));
             return nextCertNumber;
         }
 
@@ -216,6 +240,8 @@ namespace sapzeugnisablage
             //Check whether any of the compared objects is null.
             if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
                 return false;
+
+            //Comparer.DefaultInvariant.Compare(x.FullName, y.FullName);
 
             return x.FullName == y.FullName;
         }
