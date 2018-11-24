@@ -75,11 +75,6 @@ namespace sapzeugnisablage
                     }
                 }
 
-
-
-
-
-
                 Console.WriteLine("Es gibt {0} Zertifikate", certfilesInfo.Count);
 
                 return certfilesInfo;
@@ -105,23 +100,34 @@ namespace sapzeugnisablage
         public List<DirectoryInfo> CreateSubDirectories(){return CreateSubDirectories(this.MaxCertNumber + 1, this.CertNumberCycleNext);}
         public List<DirectoryInfo> CreateSubDirectories(uint startnumber, uint endnumber)
         {
-            List<DirectoryInfo> NewSubCertFolders = new List<DirectoryInfo>();
-            for (uint certnum = startnumber; certnum <= endnumber; certnum++)
+            Console.WriteLine("Erstelle Ordner von {0} bis {1}", startnumber, endnumber);
+            OnTaskProgressed(new TaskProgressedEventArgs(startnumber,endnumber,startnumber,new StringBuilder().AppendFormat("Erstelle Ordner von {0} bis {1}", startnumber, endnumber).ToString()));
+            // list of new files in cert directory
+            var NewSubCertFolders = new List<DirectoryInfo>();
+            //ligthning fast parallel operations
+            ParallelLoopResult result = Parallel.For(startnumber, endnumber+1, certnum => 
             {
                 try
                 {
                     var newCertFolder = this.CertRootFolder.CreateSubdirectory(certnum.ToString());
+                    Console.WriteLine("Ordner {0} erstellt", newCertFolder.Name);
+                    OnTaskProgressed(new TaskProgressedEventArgs(1));
                     NewSubCertFolders.Add(newCertFolder);
-                    OnTaskProgressed(new TaskProgressedEventArgs(startnumber, endnumber, certnum, new StringBuilder("Erstelle Ordner ").Append(certnum).ToString()));
                 }
                 catch (IOException e)
                 {
-                    Console.Write(e.Data.ToString());
+                    Console.WriteLine(e.Message);
                 }
+
+            });
+
+            if (result.IsCompleted) //all loops error-free
+            {
+                NewSubCertFolders.Sort(new DirectoryInfoSortComparer());
+                //little insert here to put some pdf into the new folders for testing purpose
+                PutFilesPDFintoFolder(NewSubCertFolders);
             }
 
-            //little insert here to put some pdf into the new folders for testing purpose
-            PutFilesPDFintoFolder(NewSubCertFolders);
             //end of little insert - delete later
             OnTaskProgressed(new TaskProgressedEventArgs(0, 0, 0, ""));
 
@@ -131,19 +137,39 @@ namespace sapzeugnisablage
         // for test with put same random files into each certificate folders
         private void PutFilesPDFintoFolder(List<DirectoryInfo> myFolders)
         {
+            // get all files in cert directory
+            List<FileInfo> FileTemplates = new List<FileInfo>(CertRootFolder.EnumerateFiles());
+            // eye candy
             int folderCount = myFolders.Count;
+            // set counter
             uint counter = 0;
+            // collection of async tasks
+            var tasks = new List<Task>();
             myFolders.ForEach(obj =>
             {
-                Console.WriteLine("bin gerade bei: {0}", obj.FullName);
-                OnTaskProgressed(new TaskProgressedEventArgs(0, (uint)folderCount, counter++, new StringBuilder("Erstelle Beispiel-PDF in Ordner ").Append(obj.FullName).ToString()));
-                //get fileinfos auf files in cert root directory
-
-                List<FileInfo> FileTemplates = new List<FileInfo>(CertRootFolder.EnumerateFiles());
-
-                FileTemplates.ForEach(f => f.CopyTo(obj.FullName + "\\" + f.Name));
                 
+                // OnTaskProgressed(new TaskProgressedEventArgs(0, (uint)folderCount, counter++, new StringBuilder("Erstelle Beispiel-PDF in Ordner ").Append(obj.FullName).ToString()));
+                //get fileinfos auf files in cert root directory
+                tasks.Add(Task.Run(() => 
+                {
+                    //Console.WriteLine("bin gerade bei: {0}", obj.FullName);
+                    // collection of all sync tasks
+                    var tasksFileCopy = new List<Task>();
+                    FileTemplates.ForEach(f =>
+                    {
+                        tasksFileCopy.Add(Task.Run(() =>
+                        {
+                            f.CopyTo(obj.FullName + @"\" + f.Name);
+                        //Console.WriteLine("kopierte Datei {0}",f.FullName);
+                        }));
+                    });
+                    // wait for all tasks to finish
+                    Task.WaitAll(tasksFileCopy.ToArray());
+                }));
             });
+            // wait for all tasks to finish
+            Task.WaitAll(tasks.ToArray());
+
             OnTaskProgressed(new TaskProgressedEventArgs(0, 0, 0, ""));
         }
 
@@ -151,36 +177,48 @@ namespace sapzeugnisablage
         public void ProcessCertificateFiles() { ProcessCertificateFiles(this.CertFilesUnprocessed, this.CertFilesPDFunprocessed); }
         public void ProcessCertificateFiles(List<FileInfo> files2process, List<FileInfo> pdf2process)
         {
-            
-            // first processing pdf files
-            uint counter = 0;
+
+            // first: processing pdf files
+            OnTaskProgressed(new TaskProgressedEventArgs(0, (uint)files2process.Count, 0,
+            new StringBuilder("Verarbeite ").Append(pdf2process.Count).Append(" Dateien...").ToString()));
+            // collection of all sync tasks
+            var tasksPDF = new List<Task>();
             pdf2process.ForEach(pdf =>
             {
-                PDFMetaData pdfProperties = new PDFMetaData(Properties.Settings.Default.certificateDomain , pdf.Directory.Name);
+                tasksPDF.Add(Task.Run(() => 
+                {
+                    PDFMetaData pdfProperties = new PDFMetaData(Properties.Settings.Default.certificateDomain, pdf.Directory.Name);
 
-                PDFactory.LabelonAllPages(pdf, pdfProperties);
-                // trigger event
-                OnTaskProgressed(new TaskProgressedEventArgs(0, (uint)pdf2process.Count, counter++, 
-                    new StringBuilder("Verarbeite PDF ").Append(pdf.Name).ToString()));
+                    PDFactory.LabelonAllPages(pdf, pdfProperties);
+                    // trigger event
+                    OnTaskProgressed(new TaskProgressedEventArgs(1));
+                }));
             });
+            Task.WaitAll(tasksPDF.ToArray());
 
-            // second rename file
-            counter = 0;
+            // second: rename file
+            OnTaskProgressed(new TaskProgressedEventArgs(0, (uint)files2process.Count, 0,
+                        new StringBuilder("Benenne ").Append(files2process.Count).Append(" Dateien um...").ToString()));
             string delimiterSign = Properties.Settings.Default.certificateFileNameSeparator;
+            // collection of all sync tasks
+            var tasksRename = new List<Task>();
             files2process.ForEach((f) =>
             {
-                StringBuilder newFileName = new StringBuilder(f.DirectoryName)
-                .Append(@"\")
-                .Append(f.Directory.Name)
-                .Append(delimiterSign)
-                .Append(f.Name);
+                tasksRename.Add(Task.Run(()=> 
+                {
+                    StringBuilder newFileName = new StringBuilder(f.DirectoryName)
+                    .Append(@"\")
+                    .Append(f.Directory.Name)
+                    .Append(delimiterSign)
+                    .Append(f.Name);
 
-                // rename file by moving is (like linux :-)
-                f.MoveTo(newFileName.ToString());
-                // trigger event
-                OnTaskProgressed(new TaskProgressedEventArgs(0, (uint)files2process.Count, counter++, 
-                    new StringBuilder("Umbenennen Datei ").Append(f.Name).ToString()));
+                    // rename file by moving is (like linux :-)
+                    f.MoveTo(newFileName.ToString());
+                    // trigger event
+                    OnTaskProgressed(new TaskProgressedEventArgs(1));
+                }));
             });
+            Task.WaitAll(tasksRename.ToArray());
             OnTaskProgressed(new TaskProgressedEventArgs(0, 0, 0, ""));
         }
 
@@ -245,21 +283,27 @@ namespace sapzeugnisablage
     public class TaskProgressedEventArgs : EventArgs
     {
         //constructor
+        public TaskProgressedEventArgs(int ProgressIncrement)
+        {
+            this.ProgressIncrement = ProgressIncrement;
+        }
         public TaskProgressedEventArgs(uint start, uint stop, uint val, string text)
         {
             this.Start = start;
             this.End = stop;
             this.Val = val;
             this.Text = text;
+            this.ProgressIncrement = 0;
         }
 
         public uint Start { get; set; }
         public uint End { get; set; }
         public uint Val { get; set; }
         public string Text { get; set; }
+        public int ProgressIncrement { get; set; }
     }
 
-    // serves for FileInfo object comparison
+    // serves for FileInfo object equality comparer
     public class FileInfoComparer : IEqualityComparer<FileInfo>
     {
         // implement equal function
@@ -285,6 +329,15 @@ namespace sapzeugnisablage
             if (Object.ReferenceEquals(f, null)) return 0;
 
             return f.FullName.GetHashCode();
+        }
+    }
+    // serves for FileInfo object sort comparer
+    public class DirectoryInfoSortComparer : IComparer<DirectoryInfo>
+    {
+        // implement equal function
+        public int Compare(DirectoryInfo x, DirectoryInfo y)
+        {
+            return x.FullName.CompareTo(y.FullName);
         }
     }
 

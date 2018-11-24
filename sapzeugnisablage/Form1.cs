@@ -114,10 +114,16 @@ namespace sapzeugnisablage
             }
             else
             {
+
+                if (e.ProgressIncrement != 0)
+                {
+                    toolStripProgressBar1.Increment(1);
+                } else { 
                 toolStripProgressBar1.Minimum = (int)e.Start;
                 toolStripProgressBar1.Maximum = (int)e.End;
                 toolStripProgressBar1.Value = (int)e.Val;
                 toolStripStatusLabel1.Text = string.IsNullOrEmpty(e.Text) ? CertFolderStatusStrip: e.Text ;
+                }
             }
         }
 
