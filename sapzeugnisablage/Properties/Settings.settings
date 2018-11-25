@@ -6,7 +6,7 @@
       <Value Profile="(Default)">\\nas03\backup\sap zeugnisse</Value>
     </Setting>
     <Setting Name="certificateCreateCycleEndingDigits" Type="System.UInt16" Scope="User">
-      <Value Profile="(Default)">99</Value>
+      <Value Profile="(Default)">9</Value>
     </Setting>
     <Setting Name="certificateNumberRangeStart" Type="System.UInt32" Scope="User">
       <Value Profile="(Default)">1000000</Value>

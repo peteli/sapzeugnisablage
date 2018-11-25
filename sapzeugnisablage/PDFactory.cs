@@ -23,6 +23,21 @@ namespace sapzeugnisablage
                 PdfDocument document = PdfReader.Open(file.FullName);
 
                 // write metadata
+
+/*
+                Parallel.ForEach(prop.CustomProperties, (customProp) => 
+                {
+                    if (document.Info.Elements.ContainsKey(@"/" + customProp.Key))
+                    {
+                        document.Info.Elements.SetValue(@"/" + customProp.Key, new PdfString(customProp.Value));
+                    }
+                    else
+                    {
+                        document.Info.Elements.Add(@"/" + customProp.Key, new PdfString(customProp.Value));
+                    }
+                });
+*/
+                
                 foreach(var customProp in prop.CustomProperties)
                 {
                     if (document.Info.Elements.ContainsKey(@"/" + customProp.Key))
@@ -34,9 +49,24 @@ namespace sapzeugnisablage
                         document.Info.Elements.Add(@"/" + customProp.Key, new PdfString(customProp.Value));
                     }
                 }
+              
 
                 string inPrint = prop.Domain + @" Certificate Number: " + prop.CertNum;
-                foreach (PdfPage p in document.Pages)
+                var PDFpages = document.Pages;
+/*
+                Parallel.ForEach<PdfPage>(PDFpages,(p) => 
+                {
+                    XGraphics gfx = XGraphics.FromPdfPage(p);
+                    XFont font = new XFont("Arial", 6, XFontStyle.Regular);
+                    XSize stringBlock = gfx.MeasureString(inPrint, font);
+                    XRect rect = new XRect(0, 0, stringBlock.Width + 2, stringBlock.Height + 2);
+                    XBrush brush = XBrushes.Black;
+                    gfx.DrawRectangle(brush, rect);
+                    gfx.DrawString(inPrint, font, XBrushes.White, new XRect(1, 1, stringBlock.Width, stringBlock.Height), XStringFormats.Center);
+
+                });
+*/
+              foreach(PdfPage p in document.Pages)
                 {
 
                     XGraphics gfx = XGraphics.FromPdfPage(p);

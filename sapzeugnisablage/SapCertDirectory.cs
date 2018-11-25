@@ -100,76 +100,98 @@ namespace sapzeugnisablage
         public List<DirectoryInfo> CreateSubDirectories(){return CreateSubDirectories(this.MaxCertNumber + 1, this.CertNumberCycleNext);}
         public List<DirectoryInfo> CreateSubDirectories(uint startnumber, uint endnumber)
         {
+            // eye candy
             Console.WriteLine("Erstelle Ordner von {0} bis {1}", startnumber, endnumber);
             OnTaskProgressed(new TaskProgressedEventArgs(startnumber,endnumber,startnumber,new StringBuilder().AppendFormat("Erstelle Ordner von {0} bis {1}", startnumber, endnumber).ToString()));
+
+            // build number list<int>
+            List<string> NewSubDirectoryNames = new List<string>();
+            for (uint certnum = startnumber; certnum < endnumber + 1; certnum++)
+            {
+                NewSubDirectoryNames.Add(certnum.ToString());
+            }
+            
             // list of new files in cert directory
-            var NewSubCertFolders = new List<DirectoryInfo>();
-            //ligthning fast parallel operations
-            ParallelLoopResult result = Parallel.For(startnumber, endnumber+1, certnum => 
+            var newCertFolders = new List<DirectoryInfo>();
+            // collection of async tasks
+            var tasks = new List<Task<DirectoryInfo>>();
+            NewSubDirectoryNames.ForEach(obj => 
             {
                 try
                 {
-                    var newCertFolder = this.CertRootFolder.CreateSubdirectory(certnum.ToString());
-                    Console.WriteLine("Ordner {0} erstellt", newCertFolder.Name);
-                    OnTaskProgressed(new TaskProgressedEventArgs(1));
-                    NewSubCertFolders.Add(newCertFolder);
-                }
-                catch (IOException e)
+                    // define async task and start it
+                    tasks.Add(Task.Run(() =>
+                    {
+                        var newCertFolder = this.CertRootFolder.CreateSubdirectory(obj);
+                        Console.WriteLine("Ordner {0} erstellt", newCertFolder.Name);
+                        OnTaskProgressed(new TaskProgressedEventArgs(1));
+                        return newCertFolder;
+                    }));
+
+                }catch (IOException e)
                 {
                     Console.WriteLine(e.Message);
                 }
-
             });
+            // get task that finishes when
+            var resultofTasks = Task.WhenAll(tasks);
 
-            if (result.IsCompleted) //all loops error-free
+            resultofTasks.Wait();
+
+            if (resultofTasks.Status == TaskStatus.RanToCompletion) //The task completed execution successfully.
             {
-                NewSubCertFolders.Sort(new DirectoryInfoSortComparer());
-                //little insert here to put some pdf into the new folders for testing purpose
-                PutFilesPDFintoFolder(NewSubCertFolders);
+                foreach (var result in resultofTasks.Result)
+                {
+                    newCertFolders.Add(result);
+                }
             }
 
+            // put some sample files into the new folder for testing purpose
+            PutFilesPDFintoFolder(newCertFolders);
             //end of little insert - delete later
+
+
             OnTaskProgressed(new TaskProgressedEventArgs(0, 0, 0, ""));
 
-            return NewSubCertFolders;
+            return newCertFolders;
         }
 
         // for test with put same random files into each certificate folders
         private void PutFilesPDFintoFolder(List<DirectoryInfo> myFolders)
         {
             // get all files in cert directory
-            List<FileInfo> FileTemplates = new List<FileInfo>(CertRootFolder.EnumerateFiles());
+            List<FileInfo> FileTemplates = new List<FileInfo>(CertRootFolder.GetFiles());
             // eye candy
             int folderCount = myFolders.Count;
-            // set counter
-            uint counter = 0;
             // collection of async tasks
             var tasks = new List<Task>();
+            //var tasksFileCopy = new List<Task>();
+            OnTaskProgressed(new TaskProgressedEventArgs(0, (uint)folderCount, 0, new StringBuilder("Erstelle Beispiel-PDF in Ordner ...").ToString()));
             myFolders.ForEach(obj =>
             {
                 
-                // OnTaskProgressed(new TaskProgressedEventArgs(0, (uint)folderCount, counter++, new StringBuilder("Erstelle Beispiel-PDF in Ordner ").Append(obj.FullName).ToString()));
                 //get fileinfos auf files in cert root directory
                 tasks.Add(Task.Run(() => 
                 {
                     //Console.WriteLine("bin gerade bei: {0}", obj.FullName);
+                    
                     // collection of all sync tasks
-                    var tasksFileCopy = new List<Task>();
+                    //var tasksFileCopy = new List<Task>();
                     FileTemplates.ForEach(f =>
                     {
-                        tasksFileCopy.Add(Task.Run(() =>
+                        tasks.Add(Task.Run(() =>
                         {
                             f.CopyTo(obj.FullName + @"\" + f.Name);
                         //Console.WriteLine("kopierte Datei {0}",f.FullName);
                         }));
                     });
                     // wait for all tasks to finish
-                    Task.WaitAll(tasksFileCopy.ToArray());
+                    //Task.WaitAll(tasksFileCopy.ToArray());
+                    OnTaskProgressed(new TaskProgressedEventArgs(1));
                 }));
             });
             // wait for all tasks to finish
             Task.WaitAll(tasks.ToArray());
-
             OnTaskProgressed(new TaskProgressedEventArgs(0, 0, 0, ""));
         }
 

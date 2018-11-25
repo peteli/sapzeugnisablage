@@ -37,7 +37,7 @@ namespace sapzeugnisablage.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("99")]
+        [global::System.Configuration.DefaultSettingValueAttribute("9")]
         public ushort certificateCreateCycleEndingDigits {
             get {
                 return ((ushort)(this["certificateCreateCycleEndingDigits"]));
